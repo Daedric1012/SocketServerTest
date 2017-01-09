@@ -7,6 +7,8 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 
+//stuff
+
 namespace SocketServer
 {
     class ServerStart
