@@ -20,12 +20,14 @@ namespace SocketClient
 
         static void Main(string[] args)
         {
-            Console.Title = "Cleint";
-            Setup();
+            Console.Title = "Client";
+            //Setup();
+            Client client = new Client();
+            client.Setup();
             Console.ReadLine();
         }
 
-        private static void Setup()
+        private void Setup()
         {
             //connect to server
             TcpClient client = new TcpClient();
@@ -80,7 +82,7 @@ namespace SocketClient
                     //recive message
                     msg = (Message)formatter.Deserialize(stream);
 
-                    Console.WriteLine("Received: {0}", msg._message);
+                    Console.WriteLine("Received: {0}", msg.message);
                     //BroadcastMessage(clientMessage);
                 }
                 catch (Exception e)
