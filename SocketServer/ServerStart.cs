@@ -22,11 +22,13 @@ namespace SocketServer
         {
             Console.Title = "Server";
             //DataBase db = new DataBase();
-            SetupServer();
+            ServerStart server = new ServerStart();
+            server.SetupServer();
+            //SetupServer();
             Console.ReadLine();
         }
 
-        private async static void SetupServer()
+        private async void SetupServer()
         {
             Console.WriteLine("Setting up server...");
             _listener = new TcpListener(IPAddress.Any, 3000);
@@ -73,7 +75,7 @@ namespace SocketServer
                     }else if(msg is Message)
                     {
                         Message message = (Message)msg;
-                        Console.WriteLine("Received: {0}", message._message);
+                        Console.WriteLine("Received: {0}", message.message);
                     }
                     OutBound.SendTextMessage(msg);
                 }

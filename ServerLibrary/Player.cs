@@ -5,15 +5,15 @@ namespace ServerLibary
     [Serializable]
     public class Player : IMessage
     {
-        public string _playerID { get; set; }
-        public string _message { get; set; }
-        public MessageType _messageType { get; set; }
+        public string playerID { get; set; }
+        public string message { get; set; }
+        public MessageType messageType { get; set; }
 
-        public Player(string msg, MessageType mtype, string playerID)
+        public Player(string msg, MessageType mtype, string pID)
         {
-            _playerID = playerID;
-            _message = msg;
-            _messageType = mtype;
+            playerID = pID;
+            message = msg;
+            messageType = mtype;
         }
     }
 }
