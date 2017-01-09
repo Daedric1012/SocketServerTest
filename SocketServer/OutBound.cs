@@ -17,7 +17,6 @@ namespace SocketServer
 
         public static void SendTextMessage(IMessage msg)
         {
-            //Console.WriteLine("sending: " + msg._message);
             foreach (var client in _clientList)
             {
                 // Get a stream object for reading and writing
@@ -38,7 +37,5 @@ namespace SocketServer
             //write to out stream.
             formatter.Serialize(stream, msg);
         }
-
-        //public OutBound() { }
     }
 }
