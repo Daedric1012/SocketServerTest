@@ -1,6 +1,8 @@
 ﻿using ServerLibary;
 using System;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
@@ -20,7 +22,7 @@ namespace SocketServer
         //list of our clients. singleton
         private static ClientList _clientList = ClientList.Instance;
         private static TcpListener _listener = null;
-        BackgroundWorker bw = new BackgroundWorker();
+        //BackgroundWorker bw = new BackgroundWorker();
 
         static void Main(string[] args)
         {
@@ -53,12 +55,13 @@ namespace SocketServer
             }
         }
 
-        //new parameterizedthreadstart only allows obj
+
         public static void HandleClient(IAsyncResult ar)
         {
             // Get the listener that handles the client request.
-            _listener = (TcpListener)ar.AsyncState;
-            Client client = new Client(_listener.EndAcceptTcpClient(ar));
+            TcpListener tcpL = (TcpListener)ar.AsyncState;
+            TcpClient cli = tcpL.EndAcceptTcpClient(ar);
+            Client client = new Client(cli);
             _clientList.Add(client);
 
             // Signal the main thread to continue.
@@ -69,37 +72,77 @@ namespace SocketServer
 
             // Get a stream object for reading and writing
             NetworkStream stream = client.tcp.GetStream();
-            while (client.tcp.Connected)
+
+            int errorCount = 0;
+            bool connected = true;
+            while (connected)
             {
                 try
                 {
-                    IMessage msg;
-
-                    IFormatter formatter = new BinaryFormatter();
-
-                    msg = (IMessage)formatter.Deserialize(stream);
-
-                    //should adjust this to be switch with types.
-                    if (msg is Player)
+                    if (stream.CanRead)
                     {
-                        Player player = (Player)msg;
+
+                        stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer));
+                        buffer = new byte[1024];
+                        errorCount = 0;
                     }
-                    else if (msg is Message)
-                    {
-                        Message message = (Message)msg;
-                        Console.WriteLine("Received: {0}", message.message);
-                    }
-                    OutBound.SendTextMessage(msg);
                 }
                 catch (Exception e)
                 {
-                    //Console.WriteLine("error: " + e);
+                    if (errorCount == 0)
+                        Console.WriteLine("error: " + e);
+
+                    connected = false;
+                    errorCount++;
+                    if (errorCount > 10)
+                    {
+                        Console.WriteLine("Disconnected");
+                        return;
+                    }
                 }
+
             }
             //if client is disconnected remove it.
             client.tcp.Close();
             _clientList.Remove(client);
             Console.WriteLine("client disconnected");
+            connected = false;
+            return;
         }
+
+        //end the stream reading, handle the message
+        public static void EndRead(IAsyncResult ar)
+        {
+            BuffStream bs = (BuffStream)ar.AsyncState;
+            try
+            {
+                bs.stream.EndRead(ar);
+
+                byte[] buffer = bs.buffer;
+                byte[] msgLengthBytes = new byte[sizeof(int)];
+
+                //grab the size of the payload.
+                Buffer.BlockCopy(buffer, 0, msgLengthBytes, 0, msgLengthBytes.Length);
+                int size = BitConverter.ToInt32(msgLengthBytes, 0);
+                byte[] payload = new byte[size];
+
+                //grab the payload using the size
+                Buffer.BlockCopy(buffer, sizeof(int) - 1, payload, 0, size);
+                //convert it to an actual message object
+                Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
+
+                OutBound.SendTextMessageOff(msg);
+                //Console.WriteLine("test");
+
+                Console.WriteLine("Received: {0}", msg.message);
+            }
+            catch (IOException e)
+            {
+                bs.stream.Close();
+                throw;
+            }
+        }
+
+
     }
 }

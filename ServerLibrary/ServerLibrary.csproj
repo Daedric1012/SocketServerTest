@@ -43,10 +43,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BuffStream.cs" />
+    <Compile Include="MyByteConverter.cs" />
     <Compile Include="IMessage.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="MessageType.cs" />
-    <Compile Include="Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
