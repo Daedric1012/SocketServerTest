@@ -81,7 +81,6 @@ namespace SocketServer
                 {
                     if (stream.CanRead)
                     {
-
                         stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer));
                         buffer = new byte[1024];
                         errorCount = 0;
