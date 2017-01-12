@@ -86,7 +86,7 @@ namespace SocketServer
         //end the stream reading, handle the message
         public static void EndRead(IAsyncResult ar)
         {
-            //Console.WriteLine("EndRead Called");
+            Console.WriteLine("EndRead Called");
             BuffStream bs = (BuffStream)ar.AsyncState;
             try
             {
@@ -102,19 +102,19 @@ namespace SocketServer
 
                 //grab the payload using the size
                 Buffer.BlockCopy(buffer, sizeof(int) - 1, payload, 0, size);
-                //convert it to an actual message object
+                //makes sure there is an actual payload. 
                 if (payload != new byte[size])
                 {
+                    //convert it to an actual message object
                     Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
-
+                    //broadcast
                     OutBound.SendTextMessageOff(msg);
-
-                    //Console.WriteLine("test");
-
                     Console.WriteLine("Received: {0}", msg.message);
                 }
                 beginRead(bs);
             }
+            //will terminate the client connection when an error is thrown.
+            //not sure on the best way to handle this
             catch (IOException e)
             {
                 Console.WriteLine("IOException: client being removed");
