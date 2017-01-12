@@ -87,7 +87,7 @@ namespace SocketClient
 
             //OutBound.SendTextMessageOff(msg);
             //Console.WriteLine("test");
-
+            if(msg != null)
             Console.WriteLine("Received: {0}", msg.message);
         }
 
@@ -105,7 +105,7 @@ namespace SocketClient
             {
                 try
                 {
-                    stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer));
+                    stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer, null));
                     buffer = new byte[1024];
                     errorCount = 0;
                 }
