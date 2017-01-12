@@ -10,11 +10,13 @@ namespace ServerLibary
     {
         public NetworkStream stream { get; set; }
         public byte[] buffer { get; set; }
+        public Client client { get; set; }
 
-        public BuffStream(NetworkStream s, byte[] b)
+        public BuffStream(NetworkStream s, byte[] b, Client c)
         {
             stream = s;
             buffer = b;
+            client = c;
         }
     }
 }

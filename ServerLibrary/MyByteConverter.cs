@@ -28,8 +28,13 @@ namespace ServerLibary
                 var bf = new BinaryFormatter();
                 memStream.Write(arrBytes, 0, arrBytes.Length);
                 memStream.Seek(0, SeekOrigin.Begin);
+                if (memStream.Length != 0) { 
                 Object obj = bf.Deserialize(memStream);
                 return obj;
+                }else
+                {
+                    return null;
+                }
             }
         }
     }

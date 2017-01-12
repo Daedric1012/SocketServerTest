@@ -33,7 +33,7 @@ namespace SocketServer
                 byte[] lengthBytes = BitConverter.GetBytes(size);
                 Buffer.BlockCopy(lengthBytes, 0, buffer, 0, lengthBytes.Length);
                 Buffer.BlockCopy(bMsg, 0, buffer, lengthBytes.Length - 1, bMsg.Length);
-                stream.BeginWrite(buffer, 0, buffer.Length, EndWrite, new BuffStream(stream, buffer));
+                stream.BeginWrite(buffer, 0, buffer.Length, EndWrite, new BuffStream(stream, buffer, null));
             }
         }
 

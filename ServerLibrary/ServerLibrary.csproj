@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BuffStream.cs" />
+    <Compile Include="Client.cs" />
     <Compile Include="MyByteConverter.cs" />
     <Compile Include="IMessage.cs" />
     <Compile Include="Message.cs" />

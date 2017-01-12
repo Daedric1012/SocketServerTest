@@ -19,6 +19,7 @@ namespace SocketServer
     {
         // Thread signal.
         public static ManualResetEvent allDone = new ManualResetEvent(false);
+        public static ManualResetEvent messageDone = new ManualResetEvent(false);
         //list of our clients. singleton
         private static ClientList _clientList = ClientList.Instance;
         private static TcpListener _listener = null;
@@ -67,56 +68,30 @@ namespace SocketServer
             // Signal the main thread to continue.
             allDone.Set();
 
-            //buffer, change size later if needed.
-            byte[] buffer = new byte[1024];
-
             // Get a stream object for reading and writing
             NetworkStream stream = client.tcp.GetStream();
+            beginRead(new BuffStream(stream, null, client));
+        }
 
-            int errorCount = 0;
-            bool connected = true;
-            while (connected)
-            {
-                try
-                {
-                    if (stream.CanRead)
-                    {
-                        stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer));
-                        buffer = new byte[1024];
-                        errorCount = 0;
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (errorCount == 0)
-                        Console.WriteLine("error: " + e);
-
-                    connected = false;
-                    errorCount++;
-                    if (errorCount > 10)
-                    {
-                        Console.WriteLine("Disconnected");
-                        return;
-                    }
-                }
-
-            }
-            //if client is disconnected remove it.
-            client.tcp.Close();
-            _clientList.Remove(client);
-            Console.WriteLine("client disconnected");
-            connected = false;
-            return;
+        public static void beginRead(BuffStream c)
+        {
+            messageDone.Reset();
+            //buffer, change size later if needed.
+            byte[] buffer = new byte[1024];
+            c.buffer = buffer;
+            c.stream.BeginRead(buffer, 0, buffer.Length, EndRead, c);
+            messageDone.WaitOne();
         }
 
         //end the stream reading, handle the message
         public static void EndRead(IAsyncResult ar)
         {
+            //Console.WriteLine("EndRead Called");
             BuffStream bs = (BuffStream)ar.AsyncState;
             try
             {
-                bs.stream.EndRead(ar);
-
+                int bytesRead = bs.stream.EndRead(ar);
+                messageDone.Set();
                 byte[] buffer = bs.buffer;
                 byte[] msgLengthBytes = new byte[sizeof(int)];
 
@@ -128,17 +103,26 @@ namespace SocketServer
                 //grab the payload using the size
                 Buffer.BlockCopy(buffer, sizeof(int) - 1, payload, 0, size);
                 //convert it to an actual message object
-                Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
+                if (payload != new byte[size])
+                {
+                    Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
 
-                OutBound.SendTextMessageOff(msg);
-                //Console.WriteLine("test");
+                    OutBound.SendTextMessageOff(msg);
 
-                Console.WriteLine("Received: {0}", msg.message);
+                    //Console.WriteLine("test");
+
+                    Console.WriteLine("Received: {0}", msg.message);
+                }
+                beginRead(bs);
             }
             catch (IOException e)
             {
-                bs.stream.Close();
-                throw;
+                Console.WriteLine("IOException: client being removed");
+                bs.client.tcp.Close();
+                _clientList.Remove(bs.client);
+                //bs.stream.Close();
+                //return;
+                //throw;
             }
         }
 
