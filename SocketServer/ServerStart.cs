@@ -10,52 +10,49 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 
-//stuff
-
 namespace SocketServer
 {
-
     class ServerStart
     {
+
+        private readonly IPAddress _ipAddress = IPAddress.Any;
+        private const int EndPort = 3000;
         // Thread signal.
-        public static ManualResetEvent allDone = new ManualResetEvent(false);
-        public static ManualResetEvent messageDone = new ManualResetEvent(false);
+        public static ManualResetEvent AllDone = new ManualResetEvent(false);
+        public static ManualResetEvent MessageDone = new ManualResetEvent(false);
         //list of our clients. singleton
-        private static ClientList _clientList = ClientList.Instance;
+        private static readonly ClientList ClientList = ClientList.Instance;
         private static TcpListener _listener = null;
         //BackgroundWorker bw = new BackgroundWorker();
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Console.Title = "Server";
             //DataBase db = new DataBase();
             ServerStart server = new ServerStart();
             server.SetupServer();
-            //SetupServer();
             Console.ReadLine();
         }
 
+        //not stactic because it only needs to be called once and from inside here
         private void SetupServer()
         {
             Console.WriteLine("Setting up server...");
-            _listener = new TcpListener(IPAddress.Any, 3000);
+            _listener = new TcpListener(_ipAddress, EndPort);
             _listener.Start();
 
-            bool listening = true;
-            while (listening)
+            //bool listening = true;
+            while (true)
             {
                 // Set the event to nonsignaled state.
-                allDone.Reset();
-
+                AllDone.Reset();
                 // Start an asynchronous socket to listen for connections.
                 //Console.WriteLine("Waiting for a connection...");
                 _listener.BeginAcceptTcpClient(HandleClient, _listener);
-
                 // Wait until a connection is made before continuing.
-                allDone.WaitOne();
+                AllDone.WaitOne();
             }
         }
-
 
         public static void HandleClient(IAsyncResult ar)
         {
@@ -63,35 +60,35 @@ namespace SocketServer
             TcpListener tcpL = (TcpListener)ar.AsyncState;
             TcpClient cli = tcpL.EndAcceptTcpClient(ar);
             Client client = new Client(cli);
-            _clientList.Add(client);
+            ClientList.Add(client);
 
             // Signal the main thread to continue.
-            allDone.Set();
+            AllDone.Set();
 
             // Get a stream object for reading and writing
             NetworkStream stream = client.tcp.GetStream();
-            beginRead(new BuffStream(stream, null, client));
+            BeginRead(new BuffStream(stream, null, client));
         }
 
-        public static void beginRead(BuffStream c)
+        public static void BeginRead(BuffStream c)
         {
-            messageDone.Reset();
+            MessageDone.Reset();
             //buffer, change size later if needed.
             byte[] buffer = new byte[1024];
             c.buffer = buffer;
             c.stream.BeginRead(buffer, 0, buffer.Length, EndRead, c);
-            messageDone.WaitOne();
+            MessageDone.WaitOne();
         }
 
         //end the stream reading, handle the message
         public static void EndRead(IAsyncResult ar)
         {
-            Console.WriteLine("EndRead Called");
+            //Console.WriteLine("EndRead Called");
             BuffStream bs = (BuffStream)ar.AsyncState;
             try
             {
                 int bytesRead = bs.stream.EndRead(ar);
-                messageDone.Set();
+                MessageDone.Set();
                 byte[] buffer = bs.buffer;
                 byte[] msgLengthBytes = new byte[sizeof(int)];
 
@@ -103,7 +100,7 @@ namespace SocketServer
                 //grab the payload using the size
                 Buffer.BlockCopy(buffer, sizeof(int) - 1, payload, 0, size);
                 //makes sure there is an actual payload. 
-                if (payload != new byte[size])
+                if (!payload.SequenceEqual(new byte[size]))
                 {
                     //convert it to an actual message object
                     Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
@@ -111,21 +108,16 @@ namespace SocketServer
                     OutBound.SendTextMessageOff(msg);
                     Console.WriteLine("Received: {0}", msg.message);
                 }
-                beginRead(bs);
+                BeginRead(bs);
             }
             //will terminate the client connection when an error is thrown.
             //not sure on the best way to handle this
-            catch (IOException e)
+            catch (IOException)
             {
                 Console.WriteLine("IOException: client being removed");
                 bs.client.tcp.Close();
-                _clientList.Remove(bs.client);
-                //bs.stream.Close();
-                //return;
-                //throw;
+                ClientList.Remove(bs.client);
             }
         }
-
-
     }
 }
