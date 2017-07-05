@@ -35,7 +35,8 @@ namespace SocketClient
             Console.WriteLine("attempting to connect");
             while (!client.Connected)
             {
-                client.Connect("203.51.123.211", 3000);
+                //client.Connect("203.51.123.211", 3000);
+                client.Connect("localhost", 3000);
             }
 
             //get the stream to write and read from.
