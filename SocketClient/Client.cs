@@ -18,6 +18,7 @@ namespace SocketClient
     class Client
     {
         BackgroundWorker bw = new BackgroundWorker();
+        TcpClient client = new TcpClient();
 
         static void Main(string[] args)
         {
@@ -31,7 +32,6 @@ namespace SocketClient
         private void Setup()
         {
             //connect to server
-            TcpClient client = new TcpClient();
             Console.WriteLine("attempting to connect");
             while (!client.Connected)
             {
@@ -56,16 +56,23 @@ namespace SocketClient
         {
             while (client.Connected)
             {
-                string input = Console.ReadLine();
-                Message msg = new Message(input, MessageType.Async);
-                byte[] buffer = new byte[1024];
-                byte[] bMsg = MyByteConverter.ObjectToByteArray(msg);
-                //Console.WriteLine("converted");
-                int size = bMsg.Length;
-                byte[] lengthBytes = BitConverter.GetBytes(size);
-                Buffer.BlockCopy(lengthBytes, 0, buffer, 0, lengthBytes.Length);
-                Buffer.BlockCopy(bMsg, 0, buffer, lengthBytes.Length - 1, bMsg.Length);
-                stream.Write(buffer, 0, buffer.Length);
+                try
+                {
+                    string input = Console.ReadLine();
+                    Message msg = new Message(input, MessageType.Async);
+                    byte[] buffer = new byte[1024];
+                    byte[] bMsg = MyByteConverter.ObjectToByteArray(msg);
+                    //Console.WriteLine("converted");
+                    int size = bMsg.Length;
+                    byte[] lengthBytes = BitConverter.GetBytes(size);
+                    Buffer.BlockCopy(lengthBytes, 0, buffer, 0, lengthBytes.Length);
+                    Buffer.BlockCopy(bMsg, 0, buffer, lengthBytes.Length - 1, bMsg.Length);
+                    stream.Write(buffer, 0, buffer.Length);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Disconnected from server endread");
+                }
             }
         }
 
@@ -90,6 +97,7 @@ namespace SocketClient
             //Console.WriteLine("test");
             if(msg != null)
             Console.WriteLine("Received: {0}", msg.message);
+         
         }
 
         private static void IncomingMessages(object obj)
@@ -118,7 +126,7 @@ namespace SocketClient
                     errorCount++;
                     if (errorCount > 10)
                     {
-                        Console.WriteLine("Disconnected from server");
+                        Console.WriteLine("Disconnected from server incomeing message");
                         break;
                     }
                 }

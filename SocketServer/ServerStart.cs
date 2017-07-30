@@ -21,9 +21,8 @@ namespace SocketServer
         public static ManualResetEvent AllDone = new ManualResetEvent(false);
         public static ManualResetEvent MessageDone = new ManualResetEvent(false);
         //list of our clients. singleton
-        private static readonly ClientList ClientList = ClientList.Instance;
+        private static ClientList ClientList = ClientList.Instance;
         private static TcpListener _listener = null;
-        //BackgroundWorker bw = new BackgroundWorker();
 
         private static void Main(string[] args)
         {
@@ -40,8 +39,7 @@ namespace SocketServer
             Console.WriteLine("Setting up server...");
             _listener = new TcpListener(_ipAddress, EndPort);
             _listener.Start();
-
-            //bool listening = true;
+            
             while (true)
             {
                 // Set the event to nonsignaled state.
