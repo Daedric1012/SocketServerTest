@@ -1,21 +1,14 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
-// <copyright file="ServerStart.cs" company="">
-//   stephan kranenfeld
-// </copyright>
-// <summary>
-//   Defines the ServerStart type.
-// </summary>
-// --------------------------------------------------------------------------------------------------------------------
-
+﻿
 namespace SocketServer
 {
-    using ServerLibary;
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Threading;
+    using ServerLibrary;
 
     /// <summary>
     ///     The server start.
@@ -24,30 +17,30 @@ namespace SocketServer
     {
         private const int EndPort = 3000;
 
-        // Thread signal.
-        public static ManualResetEvent AllDone = new ManualResetEvent(false);
-
-        public static ManualResetEvent MessageDone = new ManualResetEvent(false);
-
-        private static TcpListener _listener;
-
         // list of our clients. singleton
         private static readonly ClientList ClientList = ClientList.Instance;
 
-        private readonly IPAddress _ipAddress = IPAddress.Any;
+        // Thread signal.
+        private static ManualResetEvent allDone = new ManualResetEvent(false);
 
+        private static ManualResetEvent messageDone = new ManualResetEvent(false);
+        
+        private static TcpListener listener;
+
+        private readonly IPAddress ipAddress = IPAddress.Any;
+        
         public static void BeginRead(BuffStream c)
         {
-            MessageDone.Reset();
+            messageDone.Reset();
 
             // buffer, change size later if needed.
             var buffer = new byte[1024];
             c.buffer = buffer;
             c.stream.BeginRead(buffer, 0, buffer.Length, EndRead, c);
-            MessageDone.WaitOne();
+            messageDone.WaitOne();
         }
 
-        // end the stream reading, handle the message
+        // end the stream reading, handle the Words
         public static void EndRead(IAsyncResult ar)
         {
             // Console.WriteLine("EndRead Called");
@@ -55,7 +48,7 @@ namespace SocketServer
             try
             {
                 int bytesRead = bs.stream.EndRead(ar);
-                MessageDone.Set();
+                messageDone.Set();
                 byte[] buffer = bs.buffer;
                 var msgLengthBytes = new byte[sizeof(int)];
 
@@ -70,23 +63,21 @@ namespace SocketServer
                 // makes sure there is an actual payload. 
                 if (!payload.SequenceEqual(new byte[size]))
                 {
-                    // convert it to an actual message object
+                    // convert it to an actual Words object
                     Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
 
                     // broadcast
                     OutBound.SendTextMessageOff(msg);
-                    Console.WriteLine("Received: {0}", msg.message);
+                    Console.WriteLine("Received: {0}", msg.Words);
                 }
-
                 BeginRead(bs);
             }
-
-            // will terminate the client connection when an error is thrown.
-            // not sure on the best way to handle this
             catch (IOException)
             {
+                // will terminate the client connection when an error is thrown.
+                // not sure on the best way to handle this
                 Console.WriteLine("IOException: client being removed");
-                bs.client.tcp.Close();
+                bs.client.Tcp.Close();
                 ClientList.Remove(bs.client);
             }
         }
@@ -100,10 +91,10 @@ namespace SocketServer
             ClientList.Add(client);
 
             // Signal the main thread to continue.
-            AllDone.Set();
+            allDone.Set();
 
             // Get a stream object for reading and writing
-            NetworkStream stream = client.tcp.GetStream();
+            NetworkStream stream = client.Tcp.GetStream();
             BeginRead(new BuffStream(stream, null, client));
         }
 
@@ -121,20 +112,20 @@ namespace SocketServer
         private void SetupServer()
         {
             Console.WriteLine("Setting up server...");
-            _listener = new TcpListener(this._ipAddress, EndPort);
-            _listener.Start();
+            listener = new TcpListener(this.ipAddress, EndPort);
+            listener.Start();
 
             while (true)
             {
                 // Set the event to nonsignaled state.
-                AllDone.Reset();
+                allDone.Reset();
 
                 // Start an asynchronous socket to listen for connections.
                 // Console.WriteLine("Waiting for a connection...");
-                _listener.BeginAcceptTcpClient(HandleClient, _listener);
+                listener.BeginAcceptTcpClient(HandleClient, listener);
 
                 // Wait until a connection is made before continuing.
-                AllDone.WaitOne();
+                allDone.WaitOne();
             }
         }
     }

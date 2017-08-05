@@ -1,19 +1,26 @@
-﻿using System;
-
-namespace ServerLibary
+﻿namespace ServerLibrary
 {
+    using System;
+
     [Serializable]
     public class Message : IMessage
     {
-        public int size { get; set; }
-        public string playerID { get; set;}
-        public string message { get; set; }
-        public MessageType messageType { get; set; }
-
         public Message(string msg, MessageType mtype)
         {
-            message = msg;
-            messageType = mtype;
+            this.Words = msg;
+            this.MessageType = mtype;
         }
+
+        public string Words
+        {
+            get => this.Words;
+            set => this.Words = value;
+        }
+
+        public MessageType MessageType { get; set; }
+
+        public string PlayerId { get; set; }
+
+        public int Size { get; set; }
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 
-namespace ServerLibary
+namespace ServerLibrary
 {
     public class BuffStream
     {

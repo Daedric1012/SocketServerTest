@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-
-namespace ServerLibary
+﻿
+namespace ServerLibrary
 {
+    using System.Net.Sockets;
+
     public class Client
     {
-        public TcpClient tcp { get; set; }
-
         public Client(TcpClient me)
         {
-            tcp = me;
+            this.Tcp = me;
         }
+
+        public TcpClient Tcp { get; set; }
     }
 }

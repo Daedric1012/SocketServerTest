@@ -1,12 +1,13 @@
-﻿
-
-namespace ServerLibary
+﻿namespace ServerLibrary
 {
     public interface IMessage
     {
-        int size { get; set; }
-        string playerID { get; set; }
-        string message { get; set; }
-        MessageType messageType { get; set; }
+        string Words { get; set; }
+
+        MessageType MessageType { get; set; }
+
+        string PlayerId { get; set; }
+
+        int Size { get; set; }
     }
 }
