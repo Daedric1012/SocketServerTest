@@ -1,13 +1,12 @@
-﻿
-namespace SocketServer
+﻿namespace SocketServer
 {
     using System;
-    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Threading;
+
     using ServerLibrary;
 
     /// <summary>
@@ -17,39 +16,42 @@ namespace SocketServer
     {
         private const int EndPort = 3000;
 
+        // Thread signal.
+        private static readonly ManualResetEvent AllDone = new ManualResetEvent(false);
+
         // list of our clients. singleton
         private static readonly ClientList ClientList = ClientList.Instance;
 
-        // Thread signal.
-        private static ManualResetEvent allDone = new ManualResetEvent(false);
+        private static readonly ManualResetEvent MessageDone = new ManualResetEvent(false);
 
-        private static ManualResetEvent messageDone = new ManualResetEvent(false);
-        
         private static TcpListener listener;
 
         private readonly IPAddress ipAddress = IPAddress.Any;
-        
+
         public static void BeginRead(BuffStream c)
         {
-            messageDone.Reset();
+            MessageDone.Reset();
 
             // buffer, change size later if needed.
             var buffer = new byte[1024];
             c.buffer = buffer;
             c.stream.BeginRead(buffer, 0, buffer.Length, EndRead, c);
-            messageDone.WaitOne();
+            MessageDone.WaitOne();
         }
 
         // end the stream reading, handle the Words
         public static void EndRead(IAsyncResult ar)
         {
             // Console.WriteLine("EndRead Called");
-            BuffStream bs = (BuffStream)ar.AsyncState;
+            var bs = (BuffStream)ar.AsyncState;
+
+            // grab a reference to the client to confirm username
+            var obj = ClientList.FirstOrDefault(x => x == bs.ClientUser);
             try
             {
-                int bytesRead = bs.stream.EndRead(ar);
-                messageDone.Set();
-                byte[] buffer = bs.buffer;
+                var bytesRead = bs.stream.EndRead(ar);
+                MessageDone.Set();
+                var buffer = bs.buffer;
                 var msgLengthBytes = new byte[sizeof(int)];
 
                 // grab the size of the payload.
@@ -64,45 +66,49 @@ namespace SocketServer
                 if (!payload.SequenceEqual(new byte[size]))
                 {
                     // convert it to an actual Words object
-                    Message msg = (Message)MyByteConverter.ByteArrayToObject(payload);
+                    var msg = (Message)MyByteConverter.ByteArrayToObject(payload);
+
+                    if (obj != null && obj.ClientName == null)
+                    {
+                        obj.ClientName = msg.PlayerId;
+                    }
 
                     // broadcast
                     OutBound.SendTextMessageOff(msg);
-                    Console.WriteLine("Received: {0}", msg.Words);
+                    Console.WriteLine("{0}: {1}", msg.PlayerId, msg.Words);
                 }
+
                 BeginRead(bs);
             }
             catch (IOException)
             {
-                // will terminate the client connection when an error is thrown.
+                // will terminate the ClientUser connection when an error is thrown.
                 // not sure on the best way to handle this
-                Console.WriteLine("IOException: client being removed");
-                bs.client.Tcp.Close();
-                ClientList.Remove(bs.client);
+                Console.WriteLine("IOException: ClientUser being removed");
+                bs.ClientUser.Tcp.Close();
+                ClientList.Remove(bs.ClientUser);
             }
         }
 
         public static void HandleClient(IAsyncResult ar)
         {
-            // Get the listener that handles the client request.
+            // Get the listener that handles the ClientUser request.
             var tcpL = (TcpListener)ar.AsyncState;
             var cli = tcpL.EndAcceptTcpClient(ar);
-            Client client = new Client(cli);
-            ClientList.Add(client);
+            var clientUser = new ClientUser(cli);
+            ClientList.Add(clientUser);
 
             // Signal the main thread to continue.
-            allDone.Set();
+            AllDone.Set();
 
             // Get a stream object for reading and writing
-            NetworkStream stream = client.Tcp.GetStream();
-            BeginRead(new BuffStream(stream, null, client));
+            var stream = clientUser.Tcp.GetStream();
+            BeginRead(new BuffStream(stream, null, clientUser));
         }
 
         private static void Main(string[] args)
         {
             Console.Title = "Server";
-
-            // DataBase db = new DataBase();
             var server = new ServerStart();
             server.SetupServer();
             Console.ReadLine();
@@ -118,14 +124,14 @@ namespace SocketServer
             while (true)
             {
                 // Set the event to nonsignaled state.
-                allDone.Reset();
+                AllDone.Reset();
 
                 // Start an asynchronous socket to listen for connections.
                 // Console.WriteLine("Waiting for a connection...");
                 listener.BeginAcceptTcpClient(HandleClient, listener);
 
                 // Wait until a connection is made before continuing.
-                allDone.WaitOne();
+                AllDone.WaitOne();
             }
         }
     }

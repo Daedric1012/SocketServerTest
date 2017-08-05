@@ -6,17 +6,18 @@ using System.Text;
 
 namespace ServerLibrary
 {
+
     public class BuffStream
     {
         public NetworkStream stream { get; set; }
         public byte[] buffer { get; set; }
-        public Client client { get; set; }
+        public ClientUser ClientUser { get; set; }
 
-        public BuffStream(NetworkStream s, byte[] b, Client c)
+        public BuffStream(NetworkStream s, byte[] b, ClientUser c)
         {
             stream = s;
             buffer = b;
-            client = c;
+            this.ClientUser = c;
         }
     }
 }

@@ -2,6 +2,7 @@
 {
     using System;
     using System.ComponentModel;
+    using System.Diagnostics.CodeAnalysis;
     using System.Net.Sockets;
     using System.Threading;
 
@@ -33,9 +34,13 @@
 
             // OutBound.SendTextMessageOff(msg);
             // Console.WriteLine("test");
-            if (msg != null) Console.WriteLine("Received: {0}", msg.Words);
+            if (msg != null)
+            {
+                Console.WriteLine("{0}:{1}", msg.PlayerId, msg.Words);
+            }
         }
-
+        
+        [SuppressMessage("StyleCop.CSharp.LayoutRules", "SA1503:CurlyBracketsMustNotBeOmitted", Justification = "Reviewed. Suppression is OK here.")]
         private static void IncomingMessages(object obj)
         {
             // cast object to a stream
@@ -47,6 +52,7 @@
             var errorCount = 0;
 
             while (true)
+            { 
                 try
                 {
                     stream.BeginRead(buffer, 0, buffer.Length, EndRead, new BuffStream(stream, buffer, null));
@@ -55,20 +61,22 @@
                 }
                 catch (Exception e)
                 {
-                    if (errorCount == 0) Console.WriteLine("error: " + e);
+                    if (errorCount == 0)
+                    {
+                        Console.WriteLine("error: " + e);
+                    }
 
                     errorCount++;
-                    if (errorCount > 10)
-                    {
-                        Console.WriteLine("Disconnected from server incoming Words");
-                        break;
-                    }
+                    if (errorCount <= 10) continue;
+                    Console.WriteLine("Disconnected from server incoming Words");
+                    break;
                 }
+            }
         }
 
         private static void Main(string[] args)
         {
-            Console.Title = "Client";
+            Console.Title = "ClientUser";
 
             // Setup();
             var client = new Client();
@@ -78,19 +86,23 @@
 
         private static void SendMessage(NetworkStream stream, TcpClient client)
         {
+            Console.Write("Enter Name:");
+            var usrId = Console.ReadLine();
             while (client.Connected)
+
                 try
                 {
+                    //Console.Write("{0}: ", usrId);
                     var input = Console.ReadLine();
-                    var msg = new Message(input, MessageType.Async);
+                    var msg = new Message(input, MessageType.Async, usrId);
                     var buffer = new byte[1024];
-                    var bMsg = MyByteConverter.ObjectToByteArray(msg);
+                    var byteMessage = MyByteConverter.ObjectToByteArray(msg);
 
                     // Console.WriteLine("converted");
-                    var size = bMsg.Length;
+                    var size = byteMessage.Length;
                     var lengthBytes = BitConverter.GetBytes(size);
                     Buffer.BlockCopy(lengthBytes, 0, buffer, 0, lengthBytes.Length);
-                    Buffer.BlockCopy(bMsg, 0, buffer, lengthBytes.Length - 1, bMsg.Length);
+                    Buffer.BlockCopy(byteMessage, 0, buffer, lengthBytes.Length - 1, byteMessage.Length);
                     stream.Write(buffer, 0, buffer.Length);
                 }
                 catch (Exception e)
@@ -104,9 +116,10 @@
             // connect to server
             Console.WriteLine("attempting to connect");
             while (!this.client.Connected)
-
-                // client.Connect("203.51.123.211", 3000);
+            {
+                // ClientUser.Connect("203.51.123.211", 3000);
                 this.client.Connect("localhost", 3000);
+            }
 
             // get the stream to write and read from.
             var stream = this.client.GetStream();
